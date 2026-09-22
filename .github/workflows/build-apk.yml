@@ -8,8 +8,8 @@ on:
       - 'buildsrc/html/**'
       - 'buildsrc/v15.js'
       - 'buildsrc/v152.js'
-      - 'buildsrc/logos_sprite48.png'
-      - 'buildsrc/icon_parts/**'
+      - 'buildsrc/logos_sprite48_valid.png'
+      - 'buildsrc/icon192_valid.png'
       - '.github/workflows/build-apk.yml'
 
 jobs:
@@ -67,8 +67,9 @@ jobs:
           p.write_text(h,encoding='utf-8')
           PY
 
-          # Convertir el sprite WEBP fuente a PNG y recortarlo en 20 PNG individuales.
-          cp buildsrc/logos_sprite48.png /tmp/logos.png
+          # Validar el sprite PNG y recortarlo en 20 PNG individuales.
+          cp buildsrc/logos_sprite48_valid.png /tmp/logos.png
+          identify /tmp/logos.png
           read W H < <(identify -format '%w %h' /tmp/logos.png)
           CW=$((W/5))
           CH=$((H/4))
@@ -88,14 +89,9 @@ jobs:
               "app/src/main/assets/escudos/${names[$i]}.png"
           done
 
-          # Reconstruir el icono elegido y convertirlo en PNG de launcher tradicional.
-          cat buildsrc/icon_parts/icon_00.part \
-              buildsrc/icon_parts/icon_01.part \
-              buildsrc/icon_parts/icon_02.part \
-              > /tmp/icon.b64
-          base64 -d /tmp/icon.b64 > /tmp/icon_source.png
-          convert /tmp/icon_source.png -resize 172x172 \
-            -background '#063565' -gravity center -extent 192x192 /tmp/icon_192.png
+          # Usar directamente el PNG de icono validado, sin reconstrucciones base64.
+          cp buildsrc/icon192_valid.png /tmp/icon_192.png
+          identify /tmp/icon_192.png
 
           convert /tmp/icon_192.png -resize 48x48   app/src/main/res/mipmap-mdpi/ic_launcher.png
           convert /tmp/icon_192.png -resize 72x72   app/src/main/res/mipmap-hdpi/ic_launcher.png
