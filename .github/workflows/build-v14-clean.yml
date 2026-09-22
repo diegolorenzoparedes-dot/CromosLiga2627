@@ -21,6 +21,13 @@ jobs:
       - name: Rebuild and validate exact v1.4 source
         shell: bash
         run: |
+          echo "791ee5ceacf6715894adf1901c2c3452d94f49c9e0dd05f89465a45ef64bde4c  buildsrc/v14b64_00.txt" | sha256sum -c -
+          echo "02895fd5f6425ba1c412b7faeef96a0e5ece030113de7874faaff0742a576244  buildsrc/v14b64_01.txt" | sha256sum -c -
+          echo "ebb5ebbb9820a1bcb1d9c24fb7c4b27934b1052e722c8ed7bb2d32700cb2db15  buildsrc/v14b64_02.txt" | sha256sum -c -
+          echo "6e5d614a671296073d27131fc79767cf243d961841e961e59b00209d368a75fe  buildsrc/v14b64_03.txt" | sha256sum -c -
+          echo "665a6c68e7c062ddf458afbfa8dfb790bf5a8e8f0986ac3de8b2e11759115677  buildsrc/v14b64_04.txt" | sha256sum -c -
+          echo "b48b44992c23a0f25e825b659dbf274f41e52f7946b02e5c85dc4c69ae78c5d4  buildsrc/v14b64_05.txt" | sha256sum -c -
+          echo "1b17a70f4d3e1eee1df267428144d517cae97c0c3125542f6c34c50ab54591e4  buildsrc/v14b64_06.txt" | sha256sum -c -
           cat buildsrc/v14b64_00.txt buildsrc/v14b64_01.txt buildsrc/v14b64_02.txt buildsrc/v14b64_03.txt buildsrc/v14b64_04.txt buildsrc/v14b64_05.txt buildsrc/v14b64_06.txt > /tmp/v14.b64
           base64 -d /tmp/v14.b64 > /tmp/v14source.zip
           echo "b69a546813bf3d0751636fc2ce8fbc631ee836d407000c69880f78fff1589e5e  /tmp/v14source.zip" | sha256sum -c -
