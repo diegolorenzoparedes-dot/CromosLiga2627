@@ -1,0 +1,49 @@
+name: Build clean v1.4
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - buildsrc/v14source.zip
+      - .github/workflows/build-v14-clean.yml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Unpack exact v1.4 source
+        run: |
+          rm -rf cleanbuild
+          mkdir cleanbuild
+          unzip -q buildsrc/v14source.zip -d cleanbuild
+          cd cleanbuild/CromosLiga2627
+          sed -i "s/applicationId 'com.cervantes.cromosliga2627'/applicationId 'com.cervantes.cromosliga2627.clean14'/" app/build.gradle
+          sed -i "s/versionCode 1/versionCode 14/" app/build.gradle
+          sed -i "s/versionName '1.0.0'/versionName '1.4-clean'/" app/build.gradle
+      - name: Build APK with Android Gradle plugin
+        working-directory: cleanbuild/CromosLiga2627
+        run: gradle --no-daemon clean assembleDebug
+      - name: Verify APK
+        shell: bash
+        run: |
+          APK=cleanbuild/CromosLiga2627/app/build/outputs/apk/debug/app-debug.apk
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" | tee apksigner.txt
+          "$BUILD_TOOLS/zipalign" -c -v 4 "$APK" | tee zipalign.txt
+          unzip -lv "$APK" | grep -E 'resources\.arsc|AndroidManifest\.xml|classes.*\.dex' | tee packaging.txt
+          cp "$APK" CromosLiga2627_v1.4_clean.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CromosLiga2627-v1.4-clean
+          path: |
+            CromosLiga2627_v1.4_clean.apk
+            apksigner.txt
+            zipalign.txt
+            packaging.txt
