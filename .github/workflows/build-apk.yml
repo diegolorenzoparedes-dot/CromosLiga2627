@@ -37,6 +37,16 @@ jobs:
 
           cat buildsrc/html/index_00.part               buildsrc/html/index_01.part               buildsrc/html/index_02.part               buildsrc/html/index_03.part               buildsrc/html/index_04.part               buildsrc/html/index_05.part               > app/src/main/assets/index.html
 
+          cp buildsrc/v15.js app/src/main/assets/v15.js
+          cp buildsrc/logos_sprite.webp app/src/main/assets/logos_sprite.webp
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/assets/index.html')
+          h=p.read_text(encoding='utf-8')
+          h=h.replace('</body>','<script src="v15.js"></script></body>')
+          p.write_text(h,encoding='utf-8')
+          PY
+
           cat > settings.gradle <<'EOF'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
           dependencyResolutionManagement {
