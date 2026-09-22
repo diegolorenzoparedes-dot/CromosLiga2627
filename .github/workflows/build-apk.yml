@@ -9,7 +9,7 @@ on:
       - 'buildsrc/v15.js'
       - 'buildsrc/v151.js'
       - 'buildsrc/logos_sprite.webp'
-      - 'buildsrc/icon160.b64'
+      - 'buildsrc/icon_parts/**'
       - '.github/workflows/build-apk.yml'
 
 jobs:
@@ -44,7 +44,11 @@ jobs:
           cp buildsrc/v15.js app/src/main/assets/v15.js
           cp buildsrc/v151.js app/src/main/assets/v151.js
           cp buildsrc/logos_sprite.webp app/src/main/assets/logos_sprite.webp
-          base64 -d buildsrc/icon160.b64 > app/src/main/res/drawable/app_icon_foreground.png
+          cat buildsrc/icon_parts/icon_00.part \
+              buildsrc/icon_parts/icon_01.part \
+              buildsrc/icon_parts/icon_02.part \
+              > /tmp/icon.b64
+          base64 -d /tmp/icon.b64 > app/src/main/res/drawable/app_icon_foreground.png
 
           python3 - <<'PY'
           from pathlib import Path
