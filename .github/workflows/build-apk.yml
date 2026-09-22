@@ -8,7 +8,7 @@ on:
       - 'buildsrc/html/**'
       - 'buildsrc/v15.js'
       - 'buildsrc/v152.js'
-      - 'buildsrc/logos_sprite.webp'
+      - 'buildsrc/logos_sprite48.png'
       - 'buildsrc/icon_parts/**'
       - '.github/workflows/build-apk.yml'
 
@@ -68,7 +68,7 @@ jobs:
           PY
 
           # Convertir el sprite WEBP fuente a PNG y recortarlo en 20 PNG individuales.
-          convert buildsrc/logos_sprite.webp /tmp/logos.png
+          cp buildsrc/logos_sprite48.png /tmp/logos.png
           read W H < <(identify -format '%w %h' /tmp/logos.png)
           CW=$((W/5))
           CH=$((H/4))
