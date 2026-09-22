@@ -230,7 +230,8 @@
         text += '\n\nNos faltan a los dos:\n'+lines(lastComparison.bothMissing);
       }
     }
-    share(text);
+    if(window.shareFileText) window.shareFileText('intercambio_cromos_2026-27.txt',text,'text/plain');
+    else share(text);
   }
 
   function filterComparison(){
