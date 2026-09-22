@@ -1,4 +1,4 @@
-name: Build Rebuilt v1.5.1
+name: Build Rebuilt v1.5.2
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
     paths:
       - 'buildsrc/html/**'
       - 'buildsrc/v15.js'
-      - 'buildsrc/v151.js'
+      - 'buildsrc/v152.js'
       - 'buildsrc/logos_sprite.webp'
       - 'buildsrc/icon_parts/**'
       - '.github/workflows/build-apk.yml'
@@ -31,32 +31,77 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf app settings.gradle build.gradle gradle.properties
-          mkdir -p app/src/main/java/com/cervantes/cromosliga2627/v151
-          mkdir -p app/src/main/assets
-          mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/drawable
-          mkdir -p app/src/main/res/mipmap-anydpi
-          mkdir -p app/src/main/res/mipmap-anydpi-v26
 
-          cat buildsrc/html/index_00.part               buildsrc/html/index_01.part               buildsrc/html/index_02.part               buildsrc/html/index_03.part               buildsrc/html/index_04.part               buildsrc/html/index_05.part               > app/src/main/assets/index.html
+          if ! command -v convert >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y imagemagick
+          fi
+
+          rm -rf app settings.gradle build.gradle gradle.properties
+          mkdir -p app/src/main/java/com/cervantes/cromosliga2627/v152
+          mkdir -p app/src/main/assets/escudos
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/xml
+          mkdir -p app/src/main/res/mipmap-mdpi
+          mkdir -p app/src/main/res/mipmap-hdpi
+          mkdir -p app/src/main/res/mipmap-xhdpi
+          mkdir -p app/src/main/res/mipmap-xxhdpi
+          mkdir -p app/src/main/res/mipmap-xxxhdpi
+
+          cat buildsrc/html/index_00.part \
+              buildsrc/html/index_01.part \
+              buildsrc/html/index_02.part \
+              buildsrc/html/index_03.part \
+              buildsrc/html/index_04.part \
+              buildsrc/html/index_05.part \
+              > app/src/main/assets/index.html
 
           cp buildsrc/v15.js app/src/main/assets/v15.js
-          cp buildsrc/v151.js app/src/main/assets/v151.js
-          cp buildsrc/logos_sprite.webp app/src/main/assets/logos_sprite.webp
-          cat buildsrc/icon_parts/icon_00.part \
-              buildsrc/icon_parts/icon_01.part \
-              buildsrc/icon_parts/icon_02.part \
-              > /tmp/icon.b64
-          base64 -d /tmp/icon.b64 > app/src/main/res/drawable/app_icon_foreground.png
+          cp buildsrc/v152.js app/src/main/assets/v152.js
 
           python3 - <<'PY'
           from pathlib import Path
           p=Path('app/src/main/assets/index.html')
           h=p.read_text(encoding='utf-8')
-          h=h.replace('</body>','<script src="v15.js"></script><script src="v151.js"></script></body>')
+          h=h.replace('</body>','<script src="v15.js"></script><script src="v152.js"></script></body>')
           p.write_text(h,encoding='utf-8')
           PY
+
+          # Convertir el sprite WEBP fuente a PNG y recortarlo en 20 PNG individuales.
+          convert buildsrc/logos_sprite.webp /tmp/logos.png
+          read W H < <(identify -format '%w %h' /tmp/logos.png)
+          CW=$((W/5))
+          CH=$((H/4))
+          test $((CW*5)) -eq "$W"
+          test $((CH*4)) -eq "$H"
+
+          names=(
+            alaves athletic atlmadrid barcelona betis
+            celta deportivocoruna elche espanyol getafe
+            levante realmadrid malaga osasuna racingsantander
+            rayovallecano realsociedad sevilla valencia villarreal
+          )
+          for i in ${!names[@]}; do
+            x=$(( (i % 5) * CW ))
+            y=$(( (i / 5) * CH ))
+            convert /tmp/logos.png -crop "${CW}x${CH}+${x}+${y}" +repage \
+              "app/src/main/assets/escudos/${names[$i]}.png"
+          done
+
+          # Reconstruir el icono elegido y convertirlo en PNG de launcher tradicional.
+          cat buildsrc/icon_parts/icon_00.part \
+              buildsrc/icon_parts/icon_01.part \
+              buildsrc/icon_parts/icon_02.part \
+              > /tmp/icon.b64
+          base64 -d /tmp/icon.b64 > /tmp/icon_source.png
+          convert /tmp/icon_source.png -resize 172x172 \
+            -background '#063565' -gravity center -extent 192x192 /tmp/icon_192.png
+
+          convert /tmp/icon_192.png -resize 48x48   app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert /tmp/icon_192.png -resize 72x72   app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert /tmp/icon_192.png -resize 96x96   app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert /tmp/icon_192.png -resize 144x144 app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp /tmp/icon_192.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
           cat > settings.gradle <<'EOF'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
@@ -64,7 +109,7 @@ jobs:
             repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
             repositories { google(); mavenCentral() }
           }
-          rootProject.name = 'CromosLiga2627v151'
+          rootProject.name = 'CromosLiga2627v152'
           include ':app'
           EOF
 
@@ -83,16 +128,20 @@ jobs:
           plugins { id 'com.android.application' }
 
           android {
-            namespace 'com.cervantes.cromosliga2627.v151'
+            namespace 'com.cervantes.cromosliga2627.v152'
             compileSdk 35
 
             defaultConfig {
-              applicationId 'com.cervantes.cromosliga2627.v151'
+              applicationId 'com.cervantes.cromosliga2627.v152'
               minSdk 24
               targetSdk 35
-              versionCode 151
-              versionName '1.5.1'
+              versionCode 152
+              versionName '1.5.2'
             }
+          }
+
+          dependencies {
+            implementation 'androidx.core:core:1.13.1'
           }
           EOF
 
@@ -101,11 +150,12 @@ jobs:
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <application
               android:allowBackup="true"
-              android:label="Cromos Liga 26-27 v1.5.1"
+              android:label="Cromos Liga 26-27 v1.5.2"
               android:icon="@mipmap/ic_launcher"
               android:roundIcon="@mipmap/ic_launcher"
               android:theme="@style/AppTheme"
               android:usesCleartextTraffic="false">
+
               <activity
                 android:name=".MainActivity"
                 android:exported="true"
@@ -115,6 +165,16 @@ jobs:
                   <category android:name="android.intent.category.LAUNCHER"/>
                 </intent-filter>
               </activity>
+
+              <provider
+                android:name="androidx.core.content.FileProvider"
+                android:authorities="${applicationId}.fileprovider"
+                android:exported="false"
+                android:grantUriPermissions="true">
+                <meta-data
+                  android:name="android.support.FILE_PROVIDER_PATHS"
+                  android:resource="@xml/file_paths"/>
+              </provider>
             </application>
           </manifest>
           EOF
@@ -131,122 +191,251 @@ jobs:
           </resources>
           EOF
 
-          cat > app/src/main/res/values/colors.xml <<'EOF'
-          <resources>
-            <color name="icon_bg">#063565</color>
-          </resources>
-          EOF
-
-          cat > app/src/main/res/mipmap-anydpi/ic_launcher.xml <<'EOF'
+          cat > app/src/main/res/xml/file_paths.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-            <item>
-              <shape android:shape="rectangle">
-                <solid android:color="#063565"/>
-                <corners android:radius="22dp"/>
-              </shape>
-            </item>
-            <item android:left="7dp" android:top="7dp" android:right="7dp" android:bottom="7dp">
-              <bitmap android:src="@drawable/app_icon_foreground" android:gravity="fill"/>
-            </item>
-          </layer-list>
+          <paths xmlns:android="http://schemas.android.com/apk/res/android">
+            <cache-path name="shared_files" path="shared/"/>
+          </paths>
           EOF
 
-          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@color/icon_bg"/>
-            <foreground android:drawable="@drawable/app_icon_foreground"/>
-          </adaptive-icon>
-          EOF
-
-          cat > app/src/main/java/com/cervantes/cromosliga2627/v151/MainActivity.java <<'EOF'
-          package com.cervantes.cromosliga2627.v151;
+          cat > app/src/main/java/com/cervantes/cromosliga2627/v152/MainActivity.java <<'EOF'
+          package com.cervantes.cromosliga2627.v152;
 
           import android.app.Activity;
           import android.content.Intent;
+          import android.database.Cursor;
+          import android.net.Uri;
           import android.os.Bundle;
+          import android.provider.OpenableColumns;
           import android.webkit.JavascriptInterface;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
 
+          import androidx.core.content.FileProvider;
+
+          import org.json.JSONObject;
+
+          import java.io.ByteArrayOutputStream;
+          import java.io.File;
+          import java.io.FileOutputStream;
+          import java.io.InputStream;
+          import java.nio.charset.StandardCharsets;
+
           public class MainActivity extends Activity {
+            private static final int PICK_LIST_FILE = 1520;
+            private WebView web;
+
             @Override
             public void onCreate(Bundle savedInstanceState) {
               super.onCreate(savedInstanceState);
-              WebView web = new WebView(this);
+
+              web = new WebView(this);
               WebSettings settings = web.getSettings();
               settings.setJavaScriptEnabled(true);
               settings.setDomStorageEnabled(true);
               settings.setAllowFileAccess(true);
-              web.addJavascriptInterface(new ShareBridge(), "Android");
+
+              web.addJavascriptInterface(new AndroidBridge(), "Android");
               web.loadUrl("file:///android_asset/index.html");
               setContentView(web);
             }
 
-            private class ShareBridge {
+            private class AndroidBridge {
               @JavascriptInterface
               public void share(String text) {
-                Intent intent = new Intent(Intent.ACTION_SEND);
-                intent.setType("text/plain");
-                intent.putExtra(Intent.EXTRA_TEXT, text);
-                startActivity(Intent.createChooser(intent, "Compartir"));
+                runOnUiThread(() -> {
+                  Intent intent = new Intent(Intent.ACTION_SEND);
+                  intent.setType("text/plain");
+                  intent.putExtra(Intent.EXTRA_TEXT, text);
+                  startActivity(Intent.createChooser(intent, "Compartir"));
+                });
               }
+
+              @JavascriptInterface
+              public void shareFile(String filename, String content, String mimeType) {
+                runOnUiThread(() -> {
+                  try {
+                    String safeName = filename == null ? "cromos.txt"
+                      : filename.replaceAll("[^A-Za-z0-9._-]", "_");
+
+                    File dir = new File(getCacheDir(), "shared");
+                    if (!dir.exists() && !dir.mkdirs()) {
+                      throw new IllegalStateException("No se pudo crear la carpeta temporal");
+                    }
+
+                    File file = new File(dir, safeName);
+                    try (FileOutputStream out = new FileOutputStream(file)) {
+                      out.write((content == null ? "" : content).getBytes(StandardCharsets.UTF_8));
+                    }
+
+                    Uri uri = FileProvider.getUriForFile(
+                      MainActivity.this,
+                      getPackageName() + ".fileprovider",
+                      file
+                    );
+
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType((mimeType == null || mimeType.isEmpty()) ? "text/plain" : mimeType);
+                    send.putExtra(Intent.EXTRA_STREAM, uri);
+                    send.putExtra(Intent.EXTRA_SUBJECT, safeName);
+                    send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(send, "Compartir archivo"));
+                  } catch (Exception e) {
+                    callImportError("No se pudo crear el archivo: " + e.getMessage());
+                  }
+                });
+              }
+
+              @JavascriptInterface
+              public void pickFile() {
+                runOnUiThread(() -> {
+                  Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                  intent.addCategory(Intent.CATEGORY_OPENABLE);
+                  intent.setType("*/*");
+                  intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
+                    "text/plain",
+                    "text/csv",
+                    "application/json",
+                    "text/comma-separated-values"
+                  });
+                  startActivityForResult(intent, PICK_LIST_FILE);
+                });
+              }
+            }
+
+            @Override
+            protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+              super.onActivityResult(requestCode, resultCode, data);
+              if (requestCode != PICK_LIST_FILE || resultCode != RESULT_OK || data == null) return;
+
+              Uri uri = data.getData();
+              if (uri == null) {
+                callImportError("No se pudo abrir el archivo");
+                return;
+              }
+
+              try {
+                String name = readDisplayName(uri);
+                String text = readText(uri);
+                String js = "window.onImportedList(" +
+                  JSONObject.quote(text) + "," + JSONObject.quote(name) + ");";
+                web.evaluateJavascript(js, null);
+              } catch (Exception e) {
+                callImportError("No se pudo leer el archivo: " + e.getMessage());
+              }
+            }
+
+            private String readDisplayName(Uri uri) {
+              String name = "lista_recibida.txt";
+              Cursor cursor = null;
+              try {
+                cursor = getContentResolver().query(uri, null, null, null, null);
+                if (cursor != null && cursor.moveToFirst()) {
+                  int ix = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                  if (ix >= 0) name = cursor.getString(ix);
+                }
+              } finally {
+                if (cursor != null) cursor.close();
+              }
+              return name == null ? "lista_recibida.txt" : name;
+            }
+
+            private String readText(Uri uri) throws Exception {
+              try (InputStream in = getContentResolver().openInputStream(uri);
+                   ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                if (in == null) throw new IllegalStateException("Archivo no disponible");
+                byte[] buffer = new byte[8192];
+                int n;
+                int total = 0;
+                while ((n = in.read(buffer)) >= 0) {
+                  total += n;
+                  if (total > 2_000_000) throw new IllegalStateException("Archivo demasiado grande");
+                  out.write(buffer, 0, n);
+                }
+                return out.toString(StandardCharsets.UTF_8.name());
+              }
+            }
+
+            private void callImportError(String message) {
+              if (web == null) return;
+              runOnUiThread(() ->
+                web.evaluateJavascript(
+                  "window.onImportError(" + JSONObject.quote(message) + ");",
+                  null
+                )
+              );
             }
           }
           EOF
 
-      - name: Validate HTML JavaScript and assets
+      - name: Validate JavaScript, PNG crests and launcher icon
         shell: bash
         run: |
           set -euo pipefail
+
           python3 - <<'PY'
           from pathlib import Path
           h=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
           assert '<script>' in h and '</script>' in h
-          assert 'v15.js' in h and 'v151.js' in h
+          assert 'v15.js' in h and 'v152.js' in h
           js=h.split('<script>',1)[1].split('</script>',1)[0]
           Path('/tmp/app.js').write_text(js,encoding='utf-8')
-          icon=Path('app/src/main/res/drawable/app_icon_foreground.png')
-          logos=Path('app/src/main/assets/logos_sprite.webp')
-          assert icon.exists() and icon.stat().st_size > 10000
-          assert logos.exists() and logos.stat().st_size > 1000
-          print('HTML chars:',len(h))
-          print('Icon bytes:',icon.stat().st_size)
-          print('Logo sprite bytes:',logos.stat().st_size)
+          logos=list(Path('app/src/main/assets/escudos').glob('*.png'))
+          assert len(logos)==20, len(logos)
+          for p in logos:
+            assert p.stat().st_size > 500, (p, p.stat().st_size)
+          for p in Path('app/src/main/res').glob('mipmap-*/ic_launcher.png'):
+            assert p.stat().st_size > 500, (p, p.stat().st_size)
+          print('Escudos PNG:',len(logos))
+          print('Iconos launcher:',len(list(Path('app/src/main/res').glob('mipmap-*/ic_launcher.png'))))
           PY
+
           node --check /tmp/app.js
           node --check app/src/main/assets/v15.js
-          node --check app/src/main/assets/v151.js
-          file app/src/main/res/drawable/app_icon_foreground.png
-          file app/src/main/assets/logos_sprite.webp
+          node --check app/src/main/assets/v152.js
+
+          identify app/src/main/assets/escudos/alaves.png
+          identify app/src/main/assets/escudos/realmadrid.png
+          identify app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
       - name: Build APK from source
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Verify APK alignment signature icon and logos
+      - name: Verify APK signature, icons, crests and file bridge
         shell: bash
         run: |
           set -euo pipefail
           APK=app/build/outputs/apk/debug/app-debug.apk
           test -f "$APK"
+
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" | tee verification.txt
           "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest application-id "$APK" | tee application-id.txt
-          unzip -lv "$APK" | grep 'resources.arsc' | tee resources-arsc.txt
-          unzip -l "$APK" | grep 'assets/logos_sprite.webp' | tee logos-asset.txt
-          unzip -l "$APK" | grep 'app_icon_foreground' | tee icon-asset.txt
-          unzip -p "$APK" assets/index.html | grep 'v151.js' | tee v151-injected.txt
-          cp "$APK" CromosLiga2627_v1.5.1.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E 'package:|application:|application-icon' | tee badging.txt
+
+          COUNT=$(unzip -l "$APK" | grep -c 'assets/escudos/.*\.png')
+          echo "Escudos dentro del APK: $COUNT" | tee escudos-asset.txt
+          test "$COUNT" -eq 20
+
+          unzip -p "$APK" assets/escudos/alaves.png > /tmp/apk-alaves.png
+          identify /tmp/apk-alaves.png | tee escudo-image-check.txt
+
+          unzip -p "$APK" assets/index.html | grep 'v152.js' | tee v152-injected.txt
+          unzip -p "$APK" assets/v152.js | grep 'shareFile' | tee share-file-check.txt
+          unzip -p "$APK" assets/v152.js | grep 'pickFile' | tee import-file-check.txt
+
+          cp "$APK" CromosLiga2627_v1.5.2.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: CromosLiga2627-v1.5.1
+          name: CromosLiga2627-v1.5.2
           path: |
-            CromosLiga2627_v1.5.1.apk
+            CromosLiga2627_v1.5.2.apk
             verification.txt
             application-id.txt
-            resources-arsc.txt
-            logos-asset.txt
-            icon-asset.txt
-            v151-injected.txt
+            badging.txt
+            escudos-asset.txt
+            escudo-image-check.txt
+            v152-injected.txt
+            share-file-check.txt
+            import-file-check.txt
