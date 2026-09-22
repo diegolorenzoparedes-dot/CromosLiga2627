@@ -1,52 +1,91 @@
-name: Build APK
+name: Build Rebuilt v1.4
+
 on:
   workflow_dispatch:
   push:
     branches: [main]
+    paths:
+      - 'buildsrc/html/**'
+      - '.github/workflows/build-apk.yml'
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Generate Android project
+
+      - name: Generate clean Android project
         shell: bash
         run: |
-          mkdir -p app/src/main/java/com/cervantes/cromosliga2627
+          set -euo pipefail
+          rm -rf app settings.gradle build.gradle gradle.properties
+          mkdir -p app/src/main/java/com/cervantes/cromosliga2627/rebuilt
           mkdir -p app/src/main/assets
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/drawable
+
+          cat buildsrc/html/index_00.part               buildsrc/html/index_01.part               buildsrc/html/index_02.part               buildsrc/html/index_03.part               buildsrc/html/index_04.part               buildsrc/html/index_05.part               > app/src/main/assets/index.html
+
           cat > settings.gradle <<'EOF'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
-          rootProject.name='CromosLiga2627'
+          dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories { google(); mavenCentral() }
+          }
+          rootProject.name = 'CromosLiga2627Rebuilt'
           include ':app'
           EOF
+
           cat > build.gradle <<'EOF'
-          plugins { id 'com.android.application' version '8.7.3' apply false }
+          plugins {
+            id 'com.android.application' version '8.7.3' apply false
+          }
           EOF
+
+          cat > gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          EOF
+
           cat > app/build.gradle <<'EOF'
           plugins { id 'com.android.application' }
+
           android {
-            namespace 'com.cervantes.cromosliga2627'
+            namespace 'com.cervantes.cromosliga2627.rebuilt'
             compileSdk 35
+
             defaultConfig {
-              applicationId 'com.cervantes.cromosliga2627'
+              applicationId 'com.cervantes.cromosliga2627.rebuilt'
               minSdk 24
               targetSdk 35
-              versionCode 1
-              versionName '1.0.0'
+              versionCode 14
+              versionName '1.4-rebuilt'
             }
           }
           EOF
+
           cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            <application android:theme="@style/AppTheme" android:label="Cromos Liga 26-27">
-              <activity android:name=".MainActivity" android:exported="true">
+            <application
+              android:allowBackup="true"
+              android:label="Cromos Liga 26-27 v1.4"
+              android:icon="@drawable/ic_launcher"
+              android:theme="@style/AppTheme"
+              android:usesCleartextTraffic="false">
+              <activity
+                android:name=".MainActivity"
+                android:exported="true"
+                android:screenOrientation="portrait">
                 <intent-filter>
                   <action android:name="android.intent.action.MAIN"/>
                   <category android:name="android.intent.category.LAUNCHER"/>
@@ -55,81 +94,101 @@ jobs:
             </application>
           </manifest>
           EOF
-          mkdir -p app/src/main/res/values
+
           cat > app/src/main/res/values/styles.xml <<'EOF'
           <resources>
             <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
               <item name="android:fontFamily">sans</item>
-              <item name="android:colorAccent">#19c37d</item>
-              <item name="android:navigationBarColor">#0b1220</item>
-              <item name="android:statusBarColor">#0b1220</item>
               <item name="android:windowLightStatusBar">false</item>
+              <item name="android:statusBarColor">#0b1220</item>
+              <item name="android:navigationBarColor">#0b1220</item>
+              <item name="android:colorAccent">#166534</item>
             </style>
           </resources>
           EOF
-          cat > app/src/main/java/com/cervantes/cromosliga2627/MainActivity.java <<'EOF'
-          package com.cervantes.cromosliga2627;
+
+          cat > app/src/main/res/drawable/ic_launcher.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="108dp" android:height="108dp"
+            android:viewportWidth="108" android:viewportHeight="108">
+            <path android:fillColor="#0B1220" android:pathData="M0,0h108v108h-108z"/>
+            <path android:fillColor="#FFFFFF" android:pathData="M54,16a38,38 0,1 0,0 76a38,38 0,1 0,0 -76"/>
+            <path android:fillColor="#166534" android:pathData="M54,29l10,8l-4,13h-12l-4,-13z"/>
+            <path android:fillColor="#166534" android:pathData="M30,44l12,-6l5,12l-9,9l-11,-6z"/>
+            <path android:fillColor="#166534" android:pathData="M78,44l-12,-6l-5,12l9,9l11,-6z"/>
+            <path android:fillColor="#166534" android:pathData="M38,72l10,-10h12l10,10l-7,10h-18z"/>
+          </vector>
+          EOF
+
+          cat > app/src/main/java/com/cervantes/cromosliga2627/rebuilt/MainActivity.java <<'EOF'
+          package com.cervantes.cromosliga2627.rebuilt;
+
           import android.app.Activity;
+          import android.content.Intent;
           import android.os.Bundle;
+          import android.webkit.JavascriptInterface;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
-          import android.content.Intent;
+
           public class MainActivity extends Activity {
-            public void onCreate(Bundle b){
-              super.onCreate(b);
-              WebView w=new WebView(this);
-              WebSettings s=w.getSettings();
-              s.setJavaScriptEnabled(true);
-              s.setDomStorageEnabled(true);
-              w.addJavascriptInterface(new Object(){
-                @android.webkit.JavascriptInterface public void share(String text){
-                  Intent i=new Intent(Intent.ACTION_SEND);
-                  i.setType("text/plain");
-                  i.putExtra(Intent.EXTRA_TEXT,text);
-                  startActivity(Intent.createChooser(i,"Compartir"));
-                }
-              },"Android");
-              w.loadUrl("file:///android_asset/index.html");
-              setContentView(w);
+            @Override
+            public void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              WebView web = new WebView(this);
+              WebSettings settings = web.getSettings();
+              settings.setJavaScriptEnabled(true);
+              settings.setDomStorageEnabled(true);
+              settings.setAllowFileAccess(true);
+              web.addJavascriptInterface(new ShareBridge(), "Android");
+              web.loadUrl("file:///android_asset/index.html");
+              setContentView(web);
+            }
+
+            private class ShareBridge {
+              @JavascriptInterface
+              public void share(String text) {
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(Intent.EXTRA_TEXT, text);
+                startActivity(Intent.createChooser(intent, "Compartir"));
+              }
             }
           }
           EOF
-          cat > app/src/main/assets/index.html <<'EOF'
-          <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cromos Liga 26-27</title>
-          <style>
-          *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#172033}header{background:#0b1220;color:#fff;padding:24px 18px 20px;position:sticky;top:0;z-index:2}h1{margin:0 0 4px;font-size:26px}.sub{opacity:.75}.progress{height:9px;background:#344054;border-radius:8px;margin:14px 0 8px;overflow:hidden}.progress div{height:100%;background:#19c37d;width:0}.stats{display:flex;gap:16px;font-size:13px}.wrap{padding:14px}.card{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 10px #00000010}.row{display:flex;gap:8px}input,select,button{font-size:16px;border-radius:10px;border:1px solid #d0d5dd;padding:11px}input{flex:1;min-width:0}button{background:#fff}button.primary{background:#19c37d;color:#06251a;border:none;font-weight:700}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:10px 0}.tabs button{padding:10px 3px;font-size:13px}.tabs .on{background:#0b1220;color:#fff}.item{display:grid;grid-template-columns:70px 1fr 112px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #eee}.code{font-weight:800}.small{font-size:12px;color:#667085}.step{display:flex;align-items:center;gap:6px}.step button{width:36px;height:36px;padding:0;font-size:22px}.qty{width:25px;text-align:center}.owned{background:#eafaf3}.dup{background:#fff7df}.section{font-size:18px;font-weight:800;margin:18px 0 6px}.empty{text-align:center;color:#667085;padding:30px}
-          </style></head><body>
-          <header><h1>⚽ Cromos Liga</h1><div class="sub">Colección 2026–27 · V1</div><div class="progress"><div id="bar"></div></div><div class="stats"><span><b id="owned">0</b>/593</span><span><b id="missing">593</b> faltan</span><span><b id="dups">0</b> repetidos</span><span id="pct">0%</span></div></header>
-          <div class="wrap">
-            <div class="card"><div class="row"><input id="quick" placeholder="Añadir nº: 25, 130, 400"><button class="primary" id="add">Añadir</button></div></div>
-            <div class="card"><div class="row"><input id="search" placeholder="Buscar número o sección"><select id="section"></select></div>
-              <div class="tabs"><button data-t="all" class="on">Álbum</button><button data-t="missing">Faltan</button><button data-t="dups">Repetidos</button><button data-t="owned">Tengo</button></div>
-              <div class="row"><button id="shareM">Compartir faltantes</button><button id="shareD">Compartir repetidos</button></div>
-            </div>
-            <div id="list"></div>
-          </div>
-          <script>
-          const teamNames=['Athletic Club','Atlético de Madrid','FC Barcelona','Real Betis','RC Celta','Deportivo La Coruña','Elche CF','RCD Espanyol','Getafe CF','Levante UD','Real Madrid CF','Málaga CF','CA Osasuna','Racing Santander','Rayo Vallecano','Real Sociedad','Sevilla FC','Valencia CF','Villarreal CF','Especiales'];
-          const items=[]; let n=1;
-          for(let t=0;t<19;t++){for(let j=1;j<=21 && n<=400;j++,n++)items.push({n,id:String(n),sec:teamNames[t],name:'Cromo '+n});}
-          while(n<=593){items.push({n,id:String(n),sec:'Especiales',name:'Cromo '+n});n++}
-          let q={};try{q=JSON.parse(localStorage.getItem('qty')||'{}')}catch(e){} let tab='all';
-          const $=x=>document.getElementById(x), qty=i=>q[i]||0;
-          function save(){localStorage.setItem('qty',JSON.stringify(q))}
-          function stats(){let o=items.filter(x=>qty(x.id)>0).length,d=items.reduce((a,x)=>a+Math.max(0,qty(x.id)-1),0),p=Math.round(o*100/593);$('owned').textContent=o;$('missing').textContent=593-o;$('dups').textContent=d;$('pct').textContent=p+'%';$('bar').style.width=p+'%'}
-          function change(id,d){q[id]=Math.max(0,qty(id)+d);if(!q[id])delete q[id];save();render()}
-          function render(){stats();let term=$('search').value.toLowerCase(),sec=$('section').value;let a=items.filter(x=>(!sec||x.sec===sec)&&(!term||(x.id+' '+x.sec).toLowerCase().includes(term))&&(tab==='all'||tab==='missing'&&qty(x.id)===0||tab==='owned'&&qty(x.id)>0||tab==='dups'&&qty(x.id)>1));let html='',last='';a.forEach(x=>{if(last!==x.sec){last=x.sec;html+='<div class="section">'+last+'</div>'}let c=qty(x.id)>1?'dup':qty(x.id)>0?'owned':'';html+='<div class="item '+c+'"><div class="code">#'+x.id+'</div><div><b>'+x.name+'</b><div class="small">'+x.sec+'</div></div><div class="step"><button onclick="change(\''+x.id+'\',-1)">−</button><span class="qty">'+qty(x.id)+'</span><button onclick="change(\''+x.id+'\',1)">+</button></div></div>'});$('list').innerHTML=html||'<div class="empty">No hay cromos en este filtro.</div>'}
-          $('section').innerHTML='<option value="">Todas</option>'+teamNames.map(x=>'<option>'+x+'</option>').join('');
-          $('search').oninput=$('section').onchange=render;
-          document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));render()});
-          $('add').onclick=()=>{($('quick').value.match(/\d+/g)||[]).forEach(v=>{if(+v>=1&&+v<=593)q[String(+v)]=qty(String(+v))+1});$('quick').value='';save();render()};
-          function txt(mode){return items.filter(x=>mode==='m'?qty(x.id)===0:qty(x.id)>1).map(x=>'#'+x.id+(mode==='d'?' x'+(qty(x.id)-1):'')).join(', ')}
-          $('shareM').onclick=()=>Android.share('Cromos Liga 26-27 - Faltan: '+txt('m'));$('shareD').onclick=()=>Android.share('Cromos Liga 26-27 - Repetidos: '+txt('d'));render();
-          </script></body></html>
-          EOF
-      - name: Build debug APK
-        run: gradle assembleDebug
+
+      - name: Validate HTML JavaScript
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          h=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
+          assert '<script>' in h and '</script>' in h
+          js=h.split('<script>',1)[1].split('</script>',1)[0]
+          Path('/tmp/app.js').write_text(js,encoding='utf-8')
+          print('HTML chars:',len(h))
+          PY
+          node --check /tmp/app.js
+
+      - name: Build APK from source
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Verify APK alignment and signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -f "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -v 4 "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" | tee verification.txt
+          "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest application-id "$APK" | tee application-id.txt
+          unzip -lv "$APK" | grep 'resources.arsc' | tee resources-arsc.txt
+          cp "$APK" CromosLiga2627_v1.4_REBUILT.apk
+
       - uses: actions/upload-artifact@v4
         with:
-          name: CromosLiga2627-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: CromosLiga2627-v1.4-REBUILT
+          path: |
+            CromosLiga2627_v1.4_REBUILT.apk
+            verification.txt
+            application-id.txt
+            resources-arsc.txt
