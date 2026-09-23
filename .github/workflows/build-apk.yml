@@ -8,8 +8,7 @@ on:
       - 'buildsrc/html/**'
       - 'buildsrc/v15.js'
       - 'buildsrc/v152.js'
-      - 'buildsrc/logos_sprite48_valid.png'
-      - 'buildsrc/icon192_valid.png'
+      - 'buildsrc/assets_b64/**'
       - '.github/workflows/build-apk.yml'
 
 jobs:
@@ -67,37 +66,36 @@ jobs:
           p.write_text(h,encoding='utf-8')
           PY
 
-          # Validar el sprite PNG y recortarlo en 20 PNG individuales.
-          cp buildsrc/logos_sprite48_valid.png /tmp/logos.png
-          identify /tmp/logos.png
-          read W H < <(identify -format '%w %h' /tmp/logos.png)
-          CW=$((W/5))
-          CH=$((H/4))
-          test $((CW*5)) -eq "$W"
-          test $((CH*4)) -eq "$H"
+          # Reconstruir el ZIP validado con 20 escudos + icono.
+          cat buildsrc/assets_b64/v152_00.part \
+              buildsrc/assets_b64/v152_01.part \
+              buildsrc/assets_b64/v152_02.part \
+              buildsrc/assets_b64/v152_03.part \
+              buildsrc/assets_b64/v152_04.part \
+              buildsrc/assets_b64/v152_05.part \
+              buildsrc/assets_b64/v152_06.part \
+              buildsrc/assets_b64/v152_07.part \
+              > /tmp/v152_assets.b64
 
-          names=(
-            alaves athletic atlmadrid barcelona betis
-            celta deportivocoruna elche espanyol getafe
-            levante realmadrid malaga osasuna racingsantander
-            rayovallecano realsociedad sevilla valencia villarreal
-          )
-          for i in ${!names[@]}; do
-            x=$(( (i % 5) * CW ))
-            y=$(( (i / 5) * CH ))
-            convert /tmp/logos.png -crop "${CW}x${CH}+${x}+${y}" +repage \
-              "app/src/main/assets/escudos/${names[$i]}.png"
-          done
+          base64 -d /tmp/v152_assets.b64 > /tmp/v152_assets.zip
+          echo "513b82dccefedcbebdaede82c5805944ee8d4abae0933c34b86413093f48cb65  /tmp/v152_assets.zip" | sha256sum -c -
+          unzip -t /tmp/v152_assets.zip
 
-          # Usar directamente el PNG de icono validado, sin reconstrucciones base64.
-          cp buildsrc/icon192_valid.png /tmp/icon_192.png
-          identify /tmp/icon_192.png
+          mkdir -p /tmp/v152_assets
+          unzip -q /tmp/v152_assets.zip -d /tmp/v152_assets
 
-          convert /tmp/icon_192.png -resize 48x48   app/src/main/res/mipmap-mdpi/ic_launcher.png
-          convert /tmp/icon_192.png -resize 72x72   app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert /tmp/icon_192.png -resize 96x96   app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert /tmp/icon_192.png -resize 144x144 app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp /tmp/icon_192.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          find /tmp/v152_assets -maxdepth 1 -type f -name '*.png' ! -name 'ic_launcher.png' -exec cp {} app/src/main/assets/escudos/ \;
+          test "$(find app/src/main/assets/escudos -maxdepth 1 -type f -name '*.png' | wc -l)" -eq 20
+
+          # Icono PNG clásico; sin adaptive icon.
+          cp /tmp/v152_assets/ic_launcher.png /tmp/icon_96.png
+          identify /tmp/icon_96.png
+
+          convert /tmp/icon_96.png -resize 48x48   app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert /tmp/icon_96.png -resize 72x72   app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp /tmp/icon_96.png                       app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert /tmp/icon_96.png -resize 144x144 app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert /tmp/icon_96.png -resize 192x192 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
           cat > settings.gradle <<'EOF'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
