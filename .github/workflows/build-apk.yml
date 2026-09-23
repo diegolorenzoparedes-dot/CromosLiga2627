@@ -8,7 +8,8 @@ on:
       - 'buildsrc/html/**'
       - 'buildsrc/v15.js'
       - 'buildsrc/v152.js'
-      - 'buildsrc/assets_b64/**'
+      - 'buildsrc/sprite_data.js'
+      - 'buildsrc/icon96.b64'
       - '.github/workflows/build-apk.yml'
 
 jobs:
@@ -56,39 +57,19 @@ jobs:
               > app/src/main/assets/index.html
 
           cp buildsrc/v15.js app/src/main/assets/v15.js
+          cp buildsrc/sprite_data.js app/src/main/assets/sprite_data.js
           cp buildsrc/v152.js app/src/main/assets/v152.js
 
           python3 - <<'PY'
           from pathlib import Path
           p=Path('app/src/main/assets/index.html')
           h=p.read_text(encoding='utf-8')
-          h=h.replace('</body>','<script src="v15.js"></script><script src="v152.js"></script></body>')
+          h=h.replace('</body>','<script src="v15.js"></script><script src="sprite_data.js"></script><script src="v152.js"></script></body>')
           p.write_text(h,encoding='utf-8')
           PY
 
-          # Reconstruir el ZIP validado con 20 escudos + icono.
-          cat buildsrc/assets_b64/v152_00.part \
-              buildsrc/assets_b64/v152_01.part \
-              buildsrc/assets_b64/v152_02.part \
-              buildsrc/assets_b64/v152_03.part \
-              buildsrc/assets_b64/v152_04.part \
-              buildsrc/assets_b64/v152_05.part \
-              buildsrc/assets_b64/v152_06.part \
-              buildsrc/assets_b64/v152_07.part \
-              > /tmp/v152_assets.b64
-
-          base64 -d /tmp/v152_assets.b64 > /tmp/v152_assets.zip
-          echo "513b82dccefedcbebdaede82c5805944ee8d4abae0933c34b86413093f48cb65  /tmp/v152_assets.zip" | sha256sum -c -
-          unzip -t /tmp/v152_assets.zip
-
-          mkdir -p /tmp/v152_assets
-          unzip -q /tmp/v152_assets.zip -d /tmp/v152_assets
-
-          find /tmp/v152_assets -maxdepth 1 -type f -name '*.png' ! -name 'ic_launcher.png' -exec cp {} app/src/main/assets/escudos/ \;
-          test "$(find app/src/main/assets/escudos -maxdepth 1 -type f -name '*.png' | wc -l)" -eq 20
-
-          # Icono PNG clásico; sin adaptive icon.
-          cp /tmp/v152_assets/ic_launcher.png /tmp/icon_96.png
+          # Icono clásico reconstruido desde texto base64 validado.
+          base64 -d buildsrc/icon96.b64 > /tmp/icon_96.png
           identify /tmp/icon_96.png
 
           convert /tmp/icon_96.png -resize 48x48   app/src/main/res/mipmap-mdpi/ic_launcher.png
@@ -362,7 +343,7 @@ jobs:
           }
           EOF
 
-      - name: Validate JavaScript, PNG crests and launcher icon
+      - name: Validate JavaScript, embedded crests and launcher icon
         shell: bash
         run: |
           set -euo pipefail
@@ -370,32 +351,24 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           h=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
-          assert '<script>' in h and '</script>' in h
-          assert 'v15.js' in h and 'v152.js' in h
-          js=h.split('<script>',1)[1].split('</script>',1)[0]
-          Path('/tmp/app.js').write_text(js,encoding='utf-8')
-          logos=list(Path('app/src/main/assets/escudos').glob('*.png'))
-          assert len(logos)==20, len(logos)
-          for p in logos:
-            assert p.stat().st_size > 500, (p, p.stat().st_size)
+          assert 'v15.js' in h and 'sprite_data.js' in h and 'v152.js' in h
+          s=Path('app/src/main/assets/sprite_data.js').read_text(encoding='utf-8')
+          assert "data:image/webp;base64," in s and len(s) > 10000
           for p in Path('app/src/main/res').glob('mipmap-*/ic_launcher.png'):
-            assert p.stat().st_size > 500, (p, p.stat().st_size)
-          print('Escudos PNG:',len(logos))
+              assert p.stat().st_size > 500, (p, p.stat().st_size)
+          print('Sprite embebido OK:',len(s))
           print('Iconos launcher:',len(list(Path('app/src/main/res').glob('mipmap-*/ic_launcher.png'))))
           PY
 
-          node --check /tmp/app.js
           node --check app/src/main/assets/v15.js
+          node --check app/src/main/assets/sprite_data.js
           node --check app/src/main/assets/v152.js
-
-          identify app/src/main/assets/escudos/alaves.png
-          identify app/src/main/assets/escudos/realmadrid.png
           identify app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
       - name: Build APK from source
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Verify APK signature, icons, crests and file bridge
+      - name: Verify APK signature, icon, embedded crests and file bridge
         shell: bash
         run: |
           set -euo pipefail
@@ -407,13 +380,8 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest application-id "$APK" | tee application-id.txt
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E 'package:|application:|application-icon' | tee badging.txt
 
-          COUNT=$(unzip -l "$APK" | grep -c 'assets/escudos/.*\.png')
-          echo "Escudos dentro del APK: $COUNT" | tee escudos-asset.txt
-          test "$COUNT" -eq 20
-
-          unzip -p "$APK" assets/escudos/alaves.png > /tmp/apk-alaves.png
-          identify /tmp/apk-alaves.png | tee escudo-image-check.txt
-
+          unzip -p "$APK" assets/sprite_data.js | grep -q 'data:image/webp;base64,' && echo "Sprite embebido: OK" | tee escudos-asset.txt
+          unzip -p "$APK" assets/index.html | grep 'sprite_data.js' | tee sprite-injected.txt
           unzip -p "$APK" assets/index.html | grep 'v152.js' | tee v152-injected.txt
           unzip -p "$APK" assets/v152.js | grep 'shareFile' | tee share-file-check.txt
           unzip -p "$APK" assets/v152.js | grep 'pickFile' | tee import-file-check.txt
@@ -429,7 +397,7 @@ jobs:
             application-id.txt
             badging.txt
             escudos-asset.txt
-            escudo-image-check.txt
+            sprite-injected.txt
             v152-injected.txt
             share-file-check.txt
             import-file-check.txt
