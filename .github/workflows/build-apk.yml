@@ -1,4 +1,4 @@
-name: Build Rebuilt v1.5.8
+name: Build Rebuilt v1.5.9
 
 on:
   workflow_dispatch:
@@ -14,8 +14,9 @@ on:
       - 'buildsrc/v156.js'
       - 'buildsrc/v157.js'
       - 'buildsrc/v158.js'
+      - 'buildsrc/v159.js'
       - 'buildsrc/sprite_data.js'
-      - 'buildsrc/sprite_v158.png'
+      - 'buildsrc/sprite_v159.js'
       - 'buildsrc/icon_v158.svg'
       - '.github/workflows/build-apk.yml'
 
@@ -74,7 +75,8 @@ jobs:
           cp buildsrc/v156.js app/src/main/assets/v156.js
           cp buildsrc/v157.js app/src/main/assets/v157.js
           cp buildsrc/v158.js app/src/main/assets/v158.js
-          cp buildsrc/sprite_v158.png app/src/main/assets/sprite_v158.png
+          cp buildsrc/sprite_v159.js app/src/main/assets/sprite_v159.js
+          cp buildsrc/v159.js app/src/main/assets/v159.js
 
           # Regenerar el sprite a 64 px por escudo y afilarlo antes de usarlo.
           python3 - <<'PY'
@@ -99,7 +101,7 @@ jobs:
           from pathlib import Path
           p=Path('app/src/main/assets/index.html')
           h=p.read_text(encoding='utf-8')
-          h=h.replace('</body>','<script src="v15.js"></script><script src="sprite_data.js"></script><script src="v152.js"></script><script src="sprite_v153.js"></script><script src="v153.js"></script><script src="v154.js"></script><script src="v155.js"></script><script src="v156.js"></script><script src="v157.js"></script><script src="v158.js"></script></body>')
+          h=h.replace('</body>','<script src="v15.js"></script><script src="sprite_data.js"></script><script src="v152.js"></script><script src="sprite_v153.js"></script><script src="v153.js"></script><script src="v154.js"></script><script src="v155.js"></script><script src="v156.js"></script><script src="v157.js"></script><script src="v158.js"></script><script src="sprite_v159.js"></script><script src="v159.js"></script></body>')
           p.write_text(h,encoding='utf-8')
           PY
 
@@ -185,8 +187,8 @@ jobs:
               applicationId 'com.cervantes.cromosliga2627.v152'
               minSdk 24
               targetSdk 35
-              versionCode 158
-              versionName '1.5.8'
+              versionCode 159
+              versionName '1.5.9'
             }
           }
 
@@ -200,7 +202,7 @@ jobs:
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <application
               android:allowBackup="true"
-              android:label="Cromos Liga 26-27 v1.5.8"
+              android:label="Cromos Liga 26-27 v1.5.9"
               android:icon="@mipmap/ic_launcher"
               android:roundIcon="@mipmap/ic_launcher_round"
               android:theme="@style/AppTheme"
@@ -222,13 +224,19 @@ jobs:
                   <category android:name="android.intent.category.DEFAULT"/>
                   <category android:name="android.intent.category.BROWSABLE"/>
                   <data android:mimeType="application/vnd.cromosliga"/>
+                  <data android:mimeType="application/octet-stream"/>
+                  <data android:mimeType="application/json"/>
+                  <data android:mimeType="text/plain"/>
                 </intent-filter>
 
-                <!-- Permite usar Compartir con... > Cromos Liga -->
+                <!-- WhatsApp y algunos gestores cambian la extensión propia a MIME genérico. -->
                 <intent-filter android:label="Importar en Cromos Liga">
                   <action android:name="android.intent.action.SEND"/>
                   <category android:name="android.intent.category.DEFAULT"/>
                   <data android:mimeType="application/vnd.cromosliga"/>
+                  <data android:mimeType="application/octet-stream"/>
+                  <data android:mimeType="application/json"/>
+                  <data android:mimeType="text/plain"/>
                 </intent-filter>
               </activity>
 
@@ -517,7 +525,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           h=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
-          assert 'v15.js' in h and 'sprite_data.js' in h and 'v152.js' in h and 'sprite_v153.js' in h and 'v153.js' in h and 'v154.js' in h and 'v155.js' in h and 'v156.js' in h and 'v157.js' in h and 'v158.js' in h
+          assert 'v15.js' in h and 'sprite_data.js' in h and 'v152.js' in h and 'sprite_v153.js' in h and 'v153.js' in h and 'v154.js' in h and 'v155.js' in h and 'v156.js' in h and 'v157.js' in h and 'v158.js' in h and 'sprite_v159.js' in h and 'v159.js' in h
           s=Path('app/src/main/assets/sprite_v153.js').read_text(encoding='utf-8')
           assert "data:image/webp;base64," in s and len(s) > 10000
           for p in Path('app/src/main/res').glob('mipmap-*/ic_launcher.png'):
@@ -536,8 +544,22 @@ jobs:
           node --check app/src/main/assets/v156.js
           node --check app/src/main/assets/v157.js
           node --check app/src/main/assets/v158.js
-          identify app/src/main/assets/sprite_v158.png
+          node --check app/src/main/assets/sprite_v159.js
+          node --check app/src/main/assets/v159.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64,re
+          s=Path('app/src/main/assets/sprite_v159.js').read_text(encoding='utf-8')
+          m=re.search(r'base64,([^\'\"]+)',s)
+          if not m:
+              raise SystemExit('No se encontró el sprite Base64 v1.5.9')
+          Path('/tmp/sprite_v159.png').write_bytes(base64.b64decode(m.group(1)))
+          PY
+          convert /tmp/sprite_v159.png -format '%wx%h' info: | tee /tmp/sprite-size.txt
+          test "$(cat /tmp/sprite-size.txt)" = "320x256"
+          convert /tmp/sprite_v159.png null:
           grep -q 'application/vnd.cromosliga' app/src/main/AndroidManifest.xml
+          grep -q 'application/octet-stream' app/src/main/AndroidManifest.xml
           test -s app/src/main/assets/app_logo.png
           identify app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           identify app/src/main/res/drawable-nodpi/ic_launcher_foreground.png
@@ -562,20 +584,21 @@ jobs:
           unzip -p "$APK" assets/index.html | grep 'sprite_v153.js' | tee sprite-injected.txt
           unzip -p "$APK" assets/index.html | grep 'v157.js' | tee v157-injected.txt
           unzip -p "$APK" assets/index.html | grep 'v158.js' | tee v158-injected.txt
-          unzip -l "$APK" | grep 'assets/sprite_v158.png' | tee v158-sprite-check.txt
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$APK" AndroidManifest.xml | grep -E 'application/vnd.cromosliga|android.intent.action.VIEW|android.intent.action.SEND' | tee cromosliga-intents.txt
+          unzip -p "$APK" assets/index.html | grep 'v159.js' | tee v159-injected.txt
+          unzip -p "$APK" assets/sprite_v159.js | grep -q 'data:image/png;base64,' && echo "Sprite v1.5.9 Base64: OK" | tee v159-sprite-check.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$APK" AndroidManifest.xml | grep -E 'application/vnd.cromosliga|application/octet-stream|android.intent.action.VIEW|android.intent.action.SEND' | tee cromosliga-intents.txt
           unzip -p "$APK" assets/v152.js | grep 'shareFile' | tee share-file-check.txt
           unzip -p "$APK" assets/v152.js | grep 'pickFile' | tee import-file-check.txt
           unzip -p "$APK" assets/v155.js | grep 'onImportedBackup' | tee backup-file-check.txt
           unzip -l "$APK" | grep 'assets/app_logo.png' | tee app-logo-check.txt
 
-          cp "$APK" CromosLiga2627_v1.5.8.apk
+          cp "$APK" CromosLiga2627_v1.5.9.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: CromosLiga2627-v1.5.8
+          name: CromosLiga2627-v1.5.9
           path: |
-            CromosLiga2627_v1.5.8.apk
+            CromosLiga2627_v1.5.9.apk
             verification.txt
             application-id.txt
             badging.txt
@@ -583,7 +606,8 @@ jobs:
             sprite-injected.txt
             v157-injected.txt
             v158-injected.txt
-            v158-sprite-check.txt
+            v159-injected.txt
+            v159-sprite-check.txt
             cromosliga-intents.txt
             share-file-check.txt
             import-file-check.txt
