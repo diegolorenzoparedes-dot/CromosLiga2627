@@ -1,4 +1,4 @@
-name: Build Rebuilt v1.5.3
+name: Build Rebuilt v1.5.4
 
 on:
   workflow_dispatch:
@@ -9,6 +9,7 @@ on:
       - 'buildsrc/v15.js'
       - 'buildsrc/v152.js'
       - 'buildsrc/v153.js'
+      - 'buildsrc/v154.js'
       - 'buildsrc/sprite_data.js'
       - 'buildsrc/icon96.b64'
       - '.github/workflows/build-apk.yml'
@@ -63,6 +64,7 @@ jobs:
           cp buildsrc/sprite_data.js app/src/main/assets/sprite_data.js
           cp buildsrc/v152.js app/src/main/assets/v152.js
           cp buildsrc/v153.js app/src/main/assets/v153.js
+          cp buildsrc/v154.js app/src/main/assets/v154.js
 
           # Regenerar el sprite a 64 px por escudo y afilarlo antes de usarlo.
           python3 - <<'PY'
@@ -87,7 +89,7 @@ jobs:
           from pathlib import Path
           p=Path('app/src/main/assets/index.html')
           h=p.read_text(encoding='utf-8')
-          h=h.replace('</body>','<script src="v15.js"></script><script src="sprite_data.js"></script><script src="v152.js"></script><script src="sprite_v153.js"></script><script src="v153.js"></script></body>')
+          h=h.replace('</body>','<script src="v15.js"></script><script src="sprite_data.js"></script><script src="v152.js"></script><script src="sprite_v153.js"></script><script src="v153.js"></script><script src="v154.js"></script></body>')
           p.write_text(h,encoding='utf-8')
           PY
 
@@ -95,10 +97,10 @@ jobs:
           base64 -d buildsrc/icon96.b64 > /tmp/icon_96.png
           identify /tmp/icon_96.png
           BG=$(convert /tmp/icon_96.png -format '%[pixel:p{0,0}]' info:)
-          convert /tmp/icon_96.png -alpha on -fuzz 14% -transparent "$BG" -trim +repage -resize '250x250>' /tmp/icon_mark.png
+          convert /tmp/icon_96.png -alpha on -fuzz 14% -transparent "$BG" -trim +repage -resize '360x360>' /tmp/icon_mark.png
           convert -size 432x432 xc:none /tmp/icon_mark.png -gravity center -composite app/src/main/res/drawable-nodpi/ic_launcher_foreground.png
 
-          convert /tmp/icon_mark.png -resize '132x132>' /tmp/icon_mark_legacy.png
+          convert /tmp/icon_mark.png -resize '170x170>' /tmp/icon_mark_legacy.png
           convert -size 192x192 xc:'#0B315E' /tmp/icon_mark_legacy.png -gravity center -composite /tmp/icon_legacy.png
           convert /tmp/icon_legacy.png -resize 48x48   app/src/main/res/mipmap-mdpi/ic_launcher.png
           convert /tmp/icon_legacy.png -resize 72x72   app/src/main/res/mipmap-hdpi/ic_launcher.png
@@ -165,8 +167,8 @@ jobs:
               applicationId 'com.cervantes.cromosliga2627.v152'
               minSdk 24
               targetSdk 35
-              versionCode 153
-              versionName '1.5.3'
+              versionCode 154
+              versionName '1.5.4'
             }
           }
 
@@ -180,7 +182,7 @@ jobs:
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <application
               android:allowBackup="true"
-              android:label="Cromos Liga 26-27 v1.5.3"
+              android:label="Cromos Liga 26-27 v1.5.4"
               android:icon="@mipmap/ic_launcher"
               android:roundIcon="@mipmap/ic_launcher_round"
               android:theme="@style/AppTheme"
@@ -406,7 +408,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           h=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
-          assert 'v15.js' in h and 'sprite_data.js' in h and 'v152.js' in h and 'sprite_v153.js' in h and 'v153.js' in h
+          assert 'v15.js' in h and 'sprite_data.js' in h and 'v152.js' in h and 'sprite_v153.js' in h and 'v153.js' in h and 'v154.js' in h
           s=Path('app/src/main/assets/sprite_v153.js').read_text(encoding='utf-8')
           assert "data:image/webp;base64," in s and len(s) > 10000
           for p in Path('app/src/main/res').glob('mipmap-*/ic_launcher.png'):
@@ -420,6 +422,7 @@ jobs:
           node --check app/src/main/assets/v152.js
           node --check app/src/main/assets/sprite_v153.js
           node --check app/src/main/assets/v153.js
+          node --check app/src/main/assets/v154.js
           identify app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           identify app/src/main/res/drawable-nodpi/ic_launcher_foreground.png
           test -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
@@ -441,7 +444,7 @@ jobs:
 
           unzip -p "$APK" assets/sprite_v153.js | grep -q 'data:image/webp;base64,' && echo "Sprite v1.5.3: OK" | tee escudos-asset.txt
           unzip -p "$APK" assets/index.html | grep 'sprite_v153.js' | tee sprite-injected.txt
-          unzip -p "$APK" assets/index.html | grep 'v153.js' | tee v153-injected.txt
+          unzip -p "$APK" assets/index.html | grep 'v154.js' | tee v154-injected.txt
           unzip -p "$APK" assets/v152.js | grep 'shareFile' | tee share-file-check.txt
           unzip -p "$APK" assets/v152.js | grep 'pickFile' | tee import-file-check.txt
 
@@ -457,6 +460,6 @@ jobs:
             badging.txt
             escudos-asset.txt
             sprite-injected.txt
-            v153-injected.txt
+            v154-injected.txt
             share-file-check.txt
             import-file-check.txt
