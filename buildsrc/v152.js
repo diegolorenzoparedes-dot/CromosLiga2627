@@ -1,50 +1,51 @@
 (function(){
 'use strict';
 
-const V152_FILES = {
-  'Deportivo Alavés':'alaves.png',
-  'Athletic Club':'athletic.png',
-  'Atlético de Madrid':'atlmadrid.png',
-  'FC Barcelona':'barcelona.png',
-  'Real Betis':'betis.png',
-  'RC Celta':'celta.png',
-  'Deportivo La Coruña':'deportivocoruna.png',
-  'Elche CF':'elche.png',
-  'RCD Espanyol':'espanyol.png',
-  'Getafe CF':'getafe.png',
-  'Levante UD':'levante.png',
-  'Real Madrid CF':'realmadrid.png',
-  'Málaga CF':'malaga.png',
-  'C.A. Osasuna':'osasuna.png',
-  'Racing de Santander':'racingsantander.png',
-  'Rayo Vallecano':'rayovallecano.png',
-  'Real Sociedad':'realsociedad.png',
-  'Sevilla FC':'sevilla.png',
-  'Valencia CF':'valencia.png',
-  'Villarreal CF':'villarreal.png'
+const V152_INDEX = {
+  'Deportivo Alavés':0,
+  'Athletic Club':1,
+  'Atlético de Madrid':2,
+  'FC Barcelona':3,
+  'Real Betis':4,
+  'RC Celta':5,
+  'Deportivo La Coruña':6,
+  'Elche CF':7,
+  'RCD Espanyol':8,
+  'Getafe CF':9,
+  'Levante UD':10,
+  'Málaga CF':11,
+  'C.A. Osasuna':12,
+  'Racing de Santander':13,
+  'Rayo Vallecano':14,
+  'Real Madrid CF':15,
+  'Real Sociedad':16,
+  'Sevilla FC':17,
+  'Valencia CF':18,
+  'Villarreal CF':19
 };
 
 const css=document.createElement('style');
 css.textContent=`
-.v152crest{width:48px;height:48px;display:grid;place-items:center;flex:0 0 auto}
-.v152crest img,.v152avatar{display:block;max-width:46px;max-height:46px;object-fit:contain}
-.v152avatar{width:48px;height:48px;padding:2px;box-sizing:border-box;border-radius:12px;background:rgba(255,255,255,.94)}
+.v152crest,.v152avatar{display:inline-block;width:48px;height:48px;flex:0 0 auto;background-repeat:no-repeat;background-size:240px 192px;background-color:rgba(255,255,255,.94)}
+.v152crest{border-radius:12px}
+.v152avatar{border-radius:12px}
 .v152FileBtn{width:100%;margin:0 0 10px;min-height:46px;border-radius:12px;border:1px solid var(--line);font-weight:800;background:var(--card)}
 `;
 document.head.appendChild(css);
 
 function logoImg(section,avatar){
-  const file=V152_FILES[section];
-  if(!file) return '';
-  const src='escudos/'+file;
-  if(avatar) return '<img class="v152avatar" alt="Escudo '+esc(section)+'" src="'+src+'">';
-  return '<div class="v152crest"><img alt="Escudo '+esc(section)+'" src="'+src+'"></div>';
+  const idx=V152_INDEX[section];
+  if(idx===undefined || !window.V152_SPRITE) return '';
+  const col=idx%5, row=Math.floor(idx/5);
+  const x=-(col*48), y=-(row*48);
+  const cls=avatar?'v152avatar':'v152crest';
+  return '<span class="'+cls+'" role="img" aria-label="Escudo '+esc(section)+'" style="background-image:url('+window.V152_SPRITE+');background-position:'+x+'px '+y+'px"></span>';
 }
 
 const oldCrest=typeof crestMarkup==='function'?crestMarkup:null;
-crestMarkup=function(m,section){return V152_FILES[section]?logoImg(section,false):(oldCrest?oldCrest(m,section):'');};
+crestMarkup=function(m,section){return V152_INDEX[section]!==undefined?logoImg(section,false):(oldCrest?oldCrest(m,section):'');};
 const oldAvatar=typeof avatarMarkup==='function'?avatarMarkup:null;
-avatarMarkup=function(s,m){return s&&s.name==='Escudo'&&V152_FILES[s.section]?logoImg(s.section,true):(oldAvatar?oldAvatar(s,m):'');};
+avatarMarkup=function(s,m){return s&&s.name==='Escudo'&&V152_INDEX[s.section]!==undefined?logoImg(s.section,true):(oldAvatar?oldAvatar(s,m):'');};
 
 function safeDate(){return new Date().toISOString().slice(0,10);}
 function asFile(name,text,mime){
@@ -100,7 +101,7 @@ window.onImportedList=function(text,name){
 window.onImportError=function(msg){toast(msg||'No se pudo leer el archivo');};
 
 const hint=document.querySelector('.quick .hint');
-if(hint)hint.textContent='v1.5.2 · escudos PNG individuales, icono nuevo y listas compartidas como archivos importables.';
+if(hint)hint.textContent='v1.5.2 · escudos embebidos, icono nuevo y listas compartidas como archivos importables.';
 
 if(typeof renderTeamGrid==='function')renderTeamGrid();
 if(typeof renderList==='function')renderList();
