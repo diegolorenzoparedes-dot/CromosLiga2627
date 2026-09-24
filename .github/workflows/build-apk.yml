@@ -16,7 +16,7 @@ on:
       - 'buildsrc/v158.js'
       - 'buildsrc/v159.js'
       - 'buildsrc/sprite_data.js'
-      - 'buildsrc/sprite_v159.js'
+      - 'buildsrc/sprite_v159_parts/**'
       - 'buildsrc/icon_v158.svg'
       - '.github/workflows/build-apk.yml'
 
@@ -75,7 +75,23 @@ jobs:
           cp buildsrc/v156.js app/src/main/assets/v156.js
           cp buildsrc/v157.js app/src/main/assets/v157.js
           cp buildsrc/v158.js app/src/main/assets/v158.js
-          cp buildsrc/sprite_v159.js app/src/main/assets/sprite_v159.js
+          cat buildsrc/sprite_v159_parts/sprite_00.part \
+              buildsrc/sprite_v159_parts/sprite_01.part \
+              buildsrc/sprite_v159_parts/sprite_02.part \
+              buildsrc/sprite_v159_parts/sprite_03.part \
+              > /tmp/sprite_v159.b64
+          base64 -d /tmp/sprite_v159.b64 > /tmp/sprite_v159.png
+          echo "79df1dbe31acad06d1ac75bd4baf2329e81c1f74ae4cc52854cbe3c85467dce1  /tmp/sprite_v159.png" | sha256sum -c -
+          identify /tmp/sprite_v159.png
+          convert /tmp/sprite_v159.png null:
+          python3 - <<'PY'
+          from pathlib import Path
+          b64=Path('/tmp/sprite_v159.b64').read_text(encoding='utf-8').strip()
+          Path('app/src/main/assets/sprite_v159.js').write_text(
+              "window.V159_SPRITE='data:image/png;base64,"+b64+"';\n",
+              encoding='utf-8'
+          )
+          PY
           cp buildsrc/v159.js app/src/main/assets/v159.js
 
           # Regenerar el sprite a 64 px por escudo y afilarlo antes de usarlo.
