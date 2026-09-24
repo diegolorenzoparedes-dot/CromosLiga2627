@@ -572,7 +572,7 @@ jobs:
           Path('/tmp/sprite_v159.png').write_bytes(base64.b64decode(m.group(1)))
           PY
           convert /tmp/sprite_v159.png -format '%wx%h' info: | tee /tmp/sprite-size.txt
-          test "$(cat /tmp/sprite-size.txt)" = "320x256"
+          test "$(cat /tmp/sprite-size.txt)" = "240x192"
           convert /tmp/sprite_v159.png null:
           grep -q 'application/vnd.cromosliga' app/src/main/AndroidManifest.xml
           grep -q 'application/octet-stream' app/src/main/AndroidManifest.xml
